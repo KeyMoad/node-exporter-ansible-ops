@@ -1,3 +1,22 @@
-#SPDX-License-Identifier: MIT-0
 ---
-# tasks file for roles/node_exporter
+- name: Validate action value
+  assert:
+    that:
+      - running_action in ['install', 'update']
+    fail_msg: "Invalid 'action'. Use 'install' or 'update'."
+
+- name: Include prerequisites
+  include_tasks: prereqs.yml
+
+- name: Show dry-run plan
+  include_tasks: dryrun.yml
+  when: dry_run
+
+- name: Perform install/update
+  include_tasks: install.yml
+  when: not dry_run
+
+- name: Handle rollback if something goes wrong
+  include_tasks: rollback.yml
+  when: not dry_run
+  rescue: true

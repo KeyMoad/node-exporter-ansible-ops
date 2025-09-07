@@ -1,3 +1,30 @@
-#SPDX-License-Identifier: MIT-0
 ---
-# defaults file for roles/node_exporter
+running_action: "{{ ACTION | default('install') | lower }}"
+dry_run: "{{ DRY_RUN | default(false) | bool }}"
+
+node_exporter_version: "{{ NODE_EXPORTER_VERSION | default('1.9.1') }}"
+ansible_architecture_map:
+  x86_64: amd64
+  aarch64: arm64
+  armv7l: armv7
+  ppc64le: ppc64le
+node_exporter_arch: "{{ ansible_architecture_map[ansible_architecture] | default('amd64') }}"
+node_exporter_download_base_url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}"
+node_exporter_filename: "node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}"
+node_exporter_tgz: "{{ node_exporter_filename }}.tar.gz"
+node_exporter_url: "{{ node_exporter_download_base_url }}/{{ node_exporter_tgz }}"
+
+node_exporter_install_dir: "/opt/node_exporter"
+node_exporter_binary_dir: "/usr/local/bin"
+node_exporter_binary_path: "{{ node_exporter_binary_dir }}/node_exporter"
+node_exporter_service_name: "node_exporter"
+
+node_exporter_user: "node_exporter"
+node_exporter_group: "node_exporter"
+
+node_exporter_flags: "--collector.systemd --collector.textfile.directory=/var/log/value_monitor"
+
+node_exporter_backup_dir: "{{ node_exporter_install_dir }}/backups"
+backup_ts: "{{ ansible_date_time.epoch }}"
+backup_binary_path: "{{ node_exporter_backup_dir }}/node_exporter-{{ backup_ts }}"
+backup_unit_path: "{{ node_exporter_backup_dir }}/{{ node_exporter_service_name }}.service-{{ backup_ts }}"

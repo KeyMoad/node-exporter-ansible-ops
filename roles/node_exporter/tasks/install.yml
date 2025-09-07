@@ -1,0 +1,118 @@
+---
+- name: Stop node_exporter if updating (only when needed)
+  ansible.builtin.systemd:
+    name: "{{ node_exporter_service_name }}"
+    state: stopped
+  when: running_action == 'update' and need_update
+  ignore_errors: true
+
+- name: Ensure group exists
+  ansible.builtin.group:
+    name: "{{ node_exporter_group }}"
+    system: yes
+
+- name: Ensure user exists (try /usr/sbin/nologin)
+  ansible.builtin.user:
+    name: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    system: yes
+    shell: /usr/sbin/nologin
+    create_home: no
+  register: _user_create
+  failed_when: false
+
+- name: Fallback shell path for distros where nologin is in /sbin
+  ansible.builtin.user:
+    name: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    system: yes
+    shell: /sbin/nologin
+    create_home: no
+  when: _user_create is failed
+
+- name: Create install and backup directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    mode: '0755'
+  loop:
+    - "{{ node_exporter_install_dir }}"
+    - "{{ node_exporter_backup_dir }}"
+
+- name: Backup current binary (if exists)
+  ansible.builtin.copy:
+    src: "{{ node_exporter_binary_path }}"
+    dest: "{{ backup_binary_path }}"
+    remote_src: true
+    mode: '0755'
+  when: running_action == 'update' and need_update and node_exporter_binary.stat.exists
+
+- name: Backup current unit file (if exists)
+  ansible.builtin.copy:
+    src: "/etc/systemd/system/{{ node_exporter_service_name }}.service"
+    dest: "{{ backup_unit_path }}"
+    remote_src: true
+    mode: '0644'
+  when: running_action == 'update' and need_install and (lookup('ansible.builtin.stat', '/etc/systemd/system/{{ node_exporter_service_name }}.service', errors='ignore')).stat.exists
+
+- name: Download node_exporter archive
+  ansible.builtin.get_url:
+    url: "{{ node_exporter_url }}"
+    dest: "/tmp/{{ node_exporter_tgz }}"
+    mode: '0644'
+  when: >
+    (running_action == 'install' and not node_exporter_binary.stat.exists) or
+    (running_action == 'update' and need_install)
+
+- name: Unpack node_exporter archive
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ node_exporter_tgz }}"
+    dest: "/tmp"
+    remote_src: yes
+    creates: "/tmp/{{ node_exporter_filename }}/node_exporter"
+  when: >
+    (running_action == 'install' and not node_exporter_binary.stat.exists) or
+    (running_action == 'update' and need_install)
+
+- name: Install binary
+  ansible.builtin.copy:
+    src: "/tmp/{{ node_exporter_filename }}/node_exporter"
+    dest: "{{ node_exporter_binary_path }}"
+    owner: "{{ node_exporter_user }}"
+    group: "{{ node_exporter_group }}"
+    mode: '0755'
+    remote_src: true
+  when: >
+    (running_action == 'install' and not node_exporter_binary.stat.exists) or
+    (running_action == 'update' and need_install)
+  notify: Restart node_exporter
+
+- name: Clean temp files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/{{ node_exporter_tgz }}"
+    - "/tmp/{{ node_exporter_filename }}"
+  when: >
+    (running_action == 'install' and not node_exporter_binary.stat.exists) or
+    (running_action == 'update' and need_install)
+
+- name: Deploy systemd unit file
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: "/etc/systemd/system/{{ node_exporter_service_name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Daemon reload
+    - Restart node_exporter
+
+- name: Enable & start node_exporter
+  ansible.builtin.systemd:
+    name: "{{ node_exporter_service_name }}"
+    state: started
+    enabled: yes

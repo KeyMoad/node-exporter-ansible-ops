@@ -1,3 +1,9 @@
-#SPDX-License-Identifier: MIT-0
 ---
-# handlers file for roles/node_exporter
+- name: Daemon reload
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Restart node_exporter
+  ansible.builtin.systemd:
+    name: "{{ node_exporter_service_name }}"
+    state: restarted

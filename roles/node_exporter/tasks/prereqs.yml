@@ -1,0 +1,44 @@
+---
+- name: Check if node_exporter binary exists
+  stat:
+    path: "{{ node_exporter_binary_path }}"
+  register: node_exporter_binary
+
+- name: Read currently installed node_exporter version (if present)
+  command: "{{ node_exporter_binary_path }} --version"
+  register: node_exporter_version_cmd
+  changed_when: false
+  failed_when: false
+  when: node_exporter_binary.stat.exists
+
+- name: Parse installed version
+  set_fact:
+    node_exporter_installed_version: >-
+      {{ (node_exporter_version_cmd.stdout | default(''))
+          | regex_search('node_exporter,? version ([0-9.]+)', '\1') | default(None) }}
+  when: node_exporter_binary.stat.exists
+
+
+- name: Decide whether (re)install/update is needed
+  set_fact:
+    need_install: >-
+      {{ (not node_exporter_binary.stat.exists)
+         or (node_exporter_installed_version | default('') != node_exporter_version) }}
+    need_update: >-
+      {{ node_exporter_binary.stat.exists
+         and (node_exporter_installed_version | default('') != node_exporter_version) }}
+
+- name: Summarize plan
+  debug:
+    msg:
+      - "Action: {{ running_action }}"
+      - "Dry run: {{ dry_run }}"
+      - "Target version: {{ node_exporter_version }}"
+      - "Installed version: {{ node_exporter_installed_version | default('none') }}"
+      - "Binary present: {{ node_exporter_binary.stat.exists }}"
+      - >-
+        Will install/update:
+        {{
+          (running_action == 'install' and (not node_exporter_binary.stat.exists))
+          or (running_action == 'update' and need_install)
+        }}

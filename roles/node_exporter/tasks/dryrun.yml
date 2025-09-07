@@ -1,0 +1,23 @@
+---
+- name: Planned steps
+  debug:
+    msg:
+      - >-
+        {{
+          (running_action == 'install' and (not node_exporter_binary.stat.exists))
+          | ternary('Install node_exporter '+node_exporter_version, 'Install skipped')
+        }}
+      - >-
+        {{
+          (running_action == 'update' and need_install)
+          | ternary('Update to '+node_exporter_version, 'Update skipped')
+        }}
+      - >-
+        {{
+          (running_action == 'update' and need_update)
+          | ternary('Service will be stopped before update', 'Service stop not required')
+        }}
+      - "Backups (binary/unit) will be created under {{ node_exporter_backup_dir }} if updating"
+      - "User/group {{ node_exporter_user }}:{{ node_exporter_group }} will be ensured"
+      - "Unit file /etc/systemd/system/{{ node_exporter_service_name }}.service will be (re)deployed if changed"
+      - "Service {{ node_exporter_service_name }} will be enabled and started"

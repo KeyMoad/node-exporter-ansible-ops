@@ -1,0 +1,34 @@
+---
+- name: Rollback binary if backup exists
+  ansible.builtin.copy:
+    src: "{{ backup_binary_path }}"
+    dest: "{{ node_exporter_binary_path }}"
+    remote_src: true
+    mode: '0755'
+  when: running_action == 'update' and need_update and (backup_binary_path is defined) and (backup_binary_path | length > 0)
+  ignore_errors: true
+
+- name: Rollback unit file if backup exists
+  ansible.builtin.copy:
+    src: "{{ backup_unit_path }}"
+    dest: "/etc/systemd/system/{{ node_exporter_service_name }}.service"
+    remote_src: true
+    mode: '0644'
+  when: running_action == 'update' and need_install and (backup_unit_path is defined) and (backup_unit_path | length > 0)
+  ignore_errors: true
+
+- name: Reload systemd after rollback
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  ignore_errors: true
+
+- name: Try to start node_exporter after rollback
+  ansible.builtin.systemd:
+    name: "{{ node_exporter_service_name }}"
+    state: started
+    enabled: yes
+  ignore_errors: true
+
+- name: Fail the play explicitly after rollback
+  ansible.builtin.fail:
+    msg: "node_exporter update failed; rollback attempted using backups created at {{ node_exporter_backup_dir }} (timestamp {{ backup_ts }})."
