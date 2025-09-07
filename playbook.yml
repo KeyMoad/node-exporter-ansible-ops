@@ -1,0 +1,7 @@
+- name: Node Exporter ops
+  hosts: "{{ HOSTS }}"
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: node_exporter
