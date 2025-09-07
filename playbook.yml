@@ -5,3 +5,7 @@
 
   roles:
     - role: node_exporter
+      vars:
+        running_action: "install"
+        NODE_EXPORTER_VERSION: "1.9.1"
+        DRY_RUN: true
