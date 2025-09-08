@@ -156,12 +156,12 @@ The service file is deployed from a Jinja2 template and includes:
 
 ## 🖥️ Standalone Bash Installer
 
-For environments without Ansible, a **Bash script** (`install_node_exporter.sh`) is included. It provides the same features (install, update, dry-run, rollback).
+For environments without Ansible, a **Bash script** (`node_exporter_ops.sh`) is included. It provides the same features (install, update, dry-run, rollback).
 
 ### Usage
 
 ```bash
-./install_node_exporter.sh --action install --version 1.9.1 --dry-run false \
+./node_exporter_ops.sh --action install --version 1.9.1 --dry-run false \
   --flags "--collector.systemd --collector.textfile.directory=/var/log/value_monitor"
 ```
 
@@ -185,20 +185,20 @@ For environments without Ansible, a **Bash script** (`install_node_exporter.sh`)
 Install Node Exporter v1.8.2:
 
 ```bash
-sudo ./install_node_exporter.sh --action install --version 1.8.2
+sudo ./node_exporter_ops.sh --action install --version 1.8.2
 ```
 
 Update Node Exporter to v1.9.1 with custom flags:
 
 ```bash
-sudo ./install_node_exporter.sh --action update --version 1.9.1 \
+sudo ./node_exporter_ops.sh --action update --version 1.9.1 \
   --flags "--collector.systemd --collector.cpu"
 ```
 
 Dry-run preview:
 
 ```bash
-sudo ./install_node_exporter.sh --action install --version 1.9.1 --dry-run true
+sudo ./node_exporter_ops.sh --action install --version 1.9.1 --dry-run true
 ```
 
 Rollback (automatic):
