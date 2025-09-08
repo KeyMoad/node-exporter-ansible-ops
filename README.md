@@ -19,6 +19,7 @@ This role is designed for **SREs, DevOps engineers, and monitoring teams** who w
 * Dry-run mode to preview actions without making changes
 * Configurable installation paths, users, and flags
 * Easy to use in a role-based structure
+* **Bonus:** Standalone Bash script for non-Ansible environments
 
 ---
 
@@ -43,7 +44,7 @@ This role is designed for **SREs, DevOps engineers, and monitoring teams** who w
 | `node_exporter_download_base_url` | `https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}` | Base URL for Node Exporter releases             |
 | `node_exporter_filename`          | `"node_exporter-{{ node_exporter_version }}.linux-{{ node_exporter_arch }}"`                 | Archive filename                                |
 | `node_exporter_tgz`               | `"{{ node_exporter_filename }}.tar.gz"`                                                      | Archive name                                    |
-| `node_exporter_url`               | `"{{ node_exporter_download_base_url }}/{{ node_exporter_tgz }"`                             | Download URL                                    |
+| `node_exporter_url`               | `"{{ node_exporter_download_base_url }}/{{ node_exporter_tgz }}"`                            | Download URL                                    |
 | `node_exporter_install_dir`       | `"/opt/node_exporter"`                                                                       | Directory to store backups                      |
 | `node_exporter_binary_dir`        | `"/usr/local/bin"`                                                                           | Directory for the binary                        |
 | `node_exporter_binary_path`       | `"{{ node_exporter_binary_dir }}/node_exporter"`                                             | Full path to binary                             |
@@ -150,6 +151,59 @@ The service file is deployed from a Jinja2 template and includes:
 * Customizable user/group
 * Network target dependency
 * Node Exporter flags configurable via `node_exporter_flags`
+
+---
+
+## 🖥️ Standalone Bash Installer
+
+For environments without Ansible, a **Bash script** (`install_node_exporter.sh`) is included. It provides the same features (install, update, dry-run, rollback).
+
+### Usage
+
+```bash
+./install_node_exporter.sh --action install --version 1.9.1 --dry-run false \
+  --flags "--collector.systemd --collector.textfile.directory=/var/log/value_monitor"
+```
+
+### Options
+
+```
+--action install|update     Action to perform (required)
+--version X.Y.Z             Node Exporter version (required)
+--dry-run true|false        Preview actions without applying
+--flags "..."                Extra runtime flags for Node Exporter
+--install-dir DIR           Install directory (default: /opt/node_exporter)
+--binary-dir DIR            Binary directory (default: /usr/local/bin)
+--user USER                 System user (default: node_exporter)
+--group GROUP               System group (default: node_exporter)
+--service-name NAME         Systemd service name (default: node_exporter)
+--backup-dir DIR            Directory for backups (default: /opt/node_exporter/backups)
+```
+
+### Examples
+
+Install Node Exporter v1.8.2:
+
+```bash
+sudo ./install_node_exporter.sh --action install --version 1.8.2
+```
+
+Update Node Exporter to v1.9.1 with custom flags:
+
+```bash
+sudo ./install_node_exporter.sh --action update --version 1.9.1 \
+  --flags "--collector.systemd --collector.cpu"
+```
+
+Dry-run preview:
+
+```bash
+sudo ./install_node_exporter.sh --action install --version 1.9.1 --dry-run true
+```
+
+Rollback (automatic):
+
+* If an update fails, the script restores the last binary and systemd unit from the backup folder.
 
 ---
 
